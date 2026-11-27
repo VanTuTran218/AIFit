@@ -19,6 +19,7 @@ import { AppFooter } from '../../components/layout/AppFooter';
 import { AccuracyRing } from '../../components/ui/AccuracyRing';
 import { useToast } from '../../components/ui/Toast';
 import { MOCK_SESSIONS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
 import { PageTransition } from '../../components/ui/PageTransition';
 import type { WorkoutSession } from '../../types';
 
@@ -42,6 +43,16 @@ export default function WorkoutSummaryPage() {
       } catch {
         // ignore
       }
+    }
+
+    if (dataService.isLiveBackend() && id && id !== 'latest') {
+      dataService.getSessionById(Number(id)).then(found => {
+        setSession(found || MOCK_SESSIONS[0]);
+      }).catch(() => {
+        const found = MOCK_SESSIONS.find(s => s.id === Number(id)) || MOCK_SESSIONS[0];
+        setSession(found);
+      });
+      return;
     }
 
     const found = MOCK_SESSIONS.find(s => s.id === Number(id)) || MOCK_SESSIONS[0];

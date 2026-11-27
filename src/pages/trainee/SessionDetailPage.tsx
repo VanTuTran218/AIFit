@@ -5,6 +5,7 @@ import { TopNavbar } from '../../components/layout/TopNavbar';
 import { AppFooter } from '../../components/layout/AppFooter';
 import { AccuracyRing } from '../../components/ui/AccuracyRing';
 import { MOCK_SESSIONS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
 import { PageTransition } from '../../components/ui/PageTransition';
 import type { WorkoutSession } from '../../types';
 
@@ -25,6 +26,16 @@ export default function SessionDetailPage() {
       } catch {
         // ignore
       }
+    }
+
+    if (dataService.isLiveBackend()) {
+      dataService.getSessionById(Number(sessionId)).then(found => {
+        setSession(found || MOCK_SESSIONS[0]);
+      }).catch(() => {
+        const found = MOCK_SESSIONS.find(s => s.id === Number(sessionId));
+        setSession(found || MOCK_SESSIONS[0]);
+      });
+      return;
     }
 
     const found = MOCK_SESSIONS.find(s => s.id === Number(sessionId));

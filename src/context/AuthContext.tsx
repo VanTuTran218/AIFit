@@ -5,7 +5,7 @@ import { authService, type LoginResult, type RegisterResult } from '../services/
 interface AuthContextValue {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<LoginResult>;
-  register: (fullName: string, email: string, password: string) => Promise<RegisterResult>;
+  register: (fullName: string, email: string, password: string, otpCode?: string) => Promise<RegisterResult>;
   logout: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
 }
@@ -31,10 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return result;
   }, []);
 
-  const register = useCallback(async (fullName: string, email: string, password: string): Promise<RegisterResult> => {
-    const result = await authService.register(fullName, email, password);
-    return result;
-  }, []);
+  const register = useCallback(
+    async (fullName: string, email: string, password: string, otpCode?: string): Promise<RegisterResult> => {
+      const result = await authService.register(fullName, email, password, otpCode);
+      return result;
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     authService.logout();

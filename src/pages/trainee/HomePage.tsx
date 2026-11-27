@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -23,6 +23,7 @@ import { TopNavbar } from '../../components/layout/TopNavbar';
 import { AppFooter } from '../../components/layout/AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { MOCK_EXERCISES, MOCK_SESSIONS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
 import { AccuracyRing } from '../../components/ui/AccuracyRing';
 import { PageTransition } from '../../components/ui/PageTransition';
 import {
@@ -73,23 +74,37 @@ const HomeSectionHeading: React.FC<HomeSectionHeadingProps> = ({
 export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [sessionsData, setSessionsData] = useState(() =>
+    dataService.isLiveBackend() ? [] : MOCK_SESSIONS
+  );
+  const [exercisesData, setExercisesData] = useState(MOCK_EXERCISES);
+
+  useEffect(() => {
+    if (!dataService.isLiveBackend()) return;
+    Promise.all([dataService.getSessions(), dataService.getExercises()])
+      .then(([s, ex]) => {
+        setSessionsData(s);
+        if (ex.length > 0) setExercisesData(ex);
+      })
+      .catch(() => {});
+  }, []);
 
   // Buổi tập gần nhất từ dữ liệu thực tế
-  const latestSession = MOCK_SESSIONS.length > 0 ? MOCK_SESSIONS[0] : null;
+  const latestSession = sessionsData.length > 0 ? sessionsData[0] : null;
 
   // Thống kê tính toán trực tiếp từ dữ liệu thực
-  const totalSessions = MOCK_SESSIONS.length;
+  const totalSessions = sessionsData.length;
   const avgAccuracy =
     totalSessions > 0
-      ? Math.round(MOCK_SESSIONS.reduce((acc, s) => acc + s.accuracy, 0) / totalSessions)
+      ? Math.round(sessionsData.reduce((acc, s) => acc + s.accuracy, 0) / totalSessions)
       : 0;
-  const totalDurationSec = MOCK_SESSIONS.reduce((acc, s) => acc + (s.durationSec || 0), 0);
+  const totalDurationSec = sessionsData.reduce((acc, s) => acc + (s.durationSec || 0), 0);
   const totalDurationMins = Math.round(totalDurationSec / 60);
 
   // Bài tập đạt độ chính xác cao nhất từ dữ liệu thực
   const exerciseAccuracies = ['Squat', 'Plank', 'Push-up']
     .map(name => {
-      const sessions = MOCK_SESSIONS.filter(s => s.exercise === name);
+      const sessions = sessionsData.filter(s => s.exercise === name);
       const avg =
         sessions.length > 0
           ? Math.round(sessions.reduce((acc, s) => acc + s.accuracy, 0) / sessions.length)
@@ -99,7 +114,9 @@ export default function HomePage() {
     .filter(e => e.count > 0)
     .sort((a, b) => b.avg - a.avg);
 
-  const bestExercise = exerciseAccuracies[0] || { name: 'Squat', avg: 88 };
+  const bestExercise =
+    exerciseAccuracies[0] ||
+    (totalSessions > 0 ? { name: 'Squat', avg: avgAccuracy } : { name: 'Chưa có buổi tập', avg: 0 });
 
   // Ngày hiện tại
   const todayFormatted = new Intl.DateTimeFormat('vi-VN', {
@@ -109,7 +126,7 @@ export default function HomePage() {
     day: 'numeric',
   }).format(new Date());
 
-  const activeExercises = MOCK_EXERCISES.filter(e => e.status === 'Active');
+  const activeExercises = exercisesData.filter(e => e.status === 'Active');
 
   const getExerciseDisplay = (name: string, index: number) => {
     const num = `0${index + 1}`;

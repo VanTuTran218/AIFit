@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -28,6 +28,7 @@ import {
 import { TopNavbar } from '../../components/layout/TopNavbar';
 import { AppFooter } from '../../components/layout/AppFooter';
 import { MOCK_SESSIONS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { AmbientLight } from '../../components/backgrounds';
 
@@ -40,19 +41,27 @@ const EXERCISE_THUMBS: Record<string, string> = {
 
 export default function HistoryPage() {
   const navigate = useNavigate();
+  const [sessions, setSessions] = useState(() =>
+    dataService.isLiveBackend() ? [] : MOCK_SESSIONS
+  );
   const [exerciseFilter, setExerciseFilter] = useState<string>('Tất cả');
   const [periodFilter, setPeriodFilter] = useState<string>('30 ngày qua');
   const [barMetricMode, setBarMetricMode] = useState<'reps' | 'hold'>('reps');
 
+  useEffect(() => {
+    if (!dataService.isLiveBackend()) return;
+    dataService.getSessions().then(setSessions).catch(() => {});
+  }, []);
+
   // Lọc dữ liệu theo bài tập & khoảng thời gian
   const filteredSessions = useMemo(() => {
-    let result = [...MOCK_SESSIONS];
+    let result = [...sessions];
 
     if (exerciseFilter !== 'Tất cả') {
       result = result.filter(s => s.exercise === exerciseFilter);
     }
 
-    const now = new Date('2026-11-23').getTime();
+    const now = dataService.isLiveBackend() ? Date.now() : new Date('2026-11-23').getTime();
     if (periodFilter === '7 ngày qua') {
       const cut = now - 7 * 24 * 3600 * 1000;
       result = result.filter(s => new Date(s.date).getTime() >= cut);
@@ -62,7 +71,7 @@ export default function HistoryPage() {
     }
 
     return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [exerciseFilter, periodFilter]);
+  }, [sessions, exerciseFilter, periodFilter]);
 
   // Thống kê tổng hợp
   const totalSessions = filteredSessions.length;

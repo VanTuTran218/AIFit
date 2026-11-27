@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -24,6 +24,8 @@ import { useAuth } from '../../context/AuthContext';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { AmbientLight } from '../../components/backgrounds';
 import { MOCK_SESSIONS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
+import { ApiError } from '../../services/api';
 
 export default function ProfilePage() {
   const { user, updateUser, logout } = useAuth();
@@ -52,21 +54,29 @@ export default function ProfilePage() {
 
   // Logout Dialog
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [sessions, setSessions] = useState(() =>
+    dataService.isLiveBackend() ? [] : MOCK_SESSIONS
+  );
 
-  // Derived training stats from MOCK_SESSIONS
-  const totalSessions = MOCK_SESSIONS.length;
+  useEffect(() => {
+    if (!dataService.isLiveBackend()) return;
+    dataService.getSessions().then(setSessions).catch(() => {});
+  }, []);
+
+  // Derived training stats from sessions (real BE when logged in via API, or MOCK_SESSIONS)
+  const totalSessions = sessions.length;
   const totalMinutes = Math.round(
-    MOCK_SESSIONS.reduce((acc, s) => acc + (s.durationSec || 0), 0) / 60
+    sessions.reduce((acc, s) => acc + (s.durationSec || 0), 0) / 60
   );
   const avgAccuracy =
     totalSessions > 0
-      ? Math.round(MOCK_SESSIONS.reduce((acc, s) => acc + (s.accuracy || 0), 0) / totalSessions)
+      ? Math.round(sessions.reduce((acc, s) => acc + (s.accuracy || 0), 0) / totalSessions)
       : 0;
 
   const isProfileChanged =
     fullName.trim() !== (user?.fullName || '') && fullName.trim().length > 0;
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
       setProfileError('Vui lòng nhập họ và tên.');
@@ -75,20 +85,24 @@ export default function ProfilePage() {
     setProfileError(undefined);
     setIsSavingProfile(true);
 
-    setTimeout(() => {
-      setIsSavingProfile(false);
+    try {
+      await dataService.updateProfile(fullName.trim());
       updateUser({ fullName: fullName.trim() });
       success('Đã cập nhật thông tin cá nhân.');
-    }, 500);
+    } catch (err) {
+      setProfileError(err instanceof ApiError ? err.message : 'Không thể cập nhật hồ sơ.');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
-  const handleUpdatePassword = (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: typeof pwErrors = {};
 
     if (!currentPassword) {
       errors.currentPassword = 'Vui lòng nhập mật khẩu hiện tại.';
-    } else if (currentPassword !== 'trainee123' && currentPassword !== 'admin123') {
+    } else if (!dataService.isLiveBackend() && currentPassword !== 'trainee123' && currentPassword !== 'admin123') {
       errors.currentPassword = 'Mật khẩu hiện tại không chính xác.';
     }
 
@@ -116,13 +130,19 @@ export default function ProfilePage() {
     setPwErrors({});
     setIsUpdatingPw(true);
 
-    setTimeout(() => {
-      setIsUpdatingPw(false);
+    try {
+      await dataService.changePassword(currentPassword, newPassword, confirmPassword);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       success('Đã đổi mật khẩu thành công.');
-    }, 600);
+    } catch (err) {
+      setPwErrors({
+        currentPassword: err instanceof ApiError ? err.message : 'Không thể đổi mật khẩu. Vui lòng thử lại.',
+      });
+    } finally {
+      setIsUpdatingPw(false);
+    }
   };
 
   const handleLogout = () => {
@@ -133,12 +153,10 @@ export default function ProfilePage() {
   };
 
   const getInitials = (name?: string) => {
-    if (!name) return 'AI';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+    const clean = (name || '').trim();
+    if (!clean) return 'U';
+    const parts = clean.split(/\s+/);
+    return parts[parts.length - 1][0].toUpperCase();
   };
 
   return (

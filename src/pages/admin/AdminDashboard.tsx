@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -26,15 +26,33 @@ import { AdminLayout } from '../../components/layout/AdminLayout';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useToast } from '../../components/ui/Toast';
 import { MOCK_USERS, MOCK_LOGS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
+import type { BeAdminDashboardDto } from '../../services/api';
 import { PageTransition } from '../../components/ui/PageTransition';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { success } = useToast();
   const [period, setPeriod] = useState<'7' | '30'>('7');
+  const [beDashboard, setBeDashboard] = useState<BeAdminDashboardDto | null>(null);
+  const [liveLogs, setLiveLogs] = useState(MOCK_LOGS);
+
+  useEffect(() => {
+    if (!dataService.isLiveBackend()) return;
+    dataService.getAdminDashboard().then(d => {
+      if (d) setBeDashboard(d);
+    }).catch(() => {});
+    dataService.getSystemLogs().then(setLiveLogs).catch(() => {});
+  }, []);
 
   // Dữ liệu biểu đồ số buổi tập mỗi ngày
   const dailyActivityData = useMemo(() => {
+    if (period === '7' && beDashboard?.sessionsLast7Days?.length) {
+      return beDashboard.sessionsLast7Days.map(d => ({
+        day: d.date.slice(5),
+        sessions: d.count,
+      }));
+    }
     if (period === '7') {
       return [
         { day: 'Thứ 2', sessions: 28 },
@@ -53,7 +71,7 @@ export default function AdminDashboard() {
         { day: 'Tuần 4', sessions: 315 },
       ];
     }
-  }, [period]);
+  }, [period, beDashboard]);
 
   // Tổng số buổi tập tính chuẩn xác từ nguồn dữ liệu biểu đồ để đảm bảo nhất quán tuyệt đối
   const totalActivitySessions = useMemo(() => {
@@ -61,9 +79,9 @@ export default function AdminDashboard() {
   }, [dailyActivityData]);
 
   // Các chỉ số KPI tổng thể
-  const totalUsers = MOCK_USERS.length;
-  const avgAccuracy = 84; // Độ chính xác trung bình toàn hệ thống (%)
-  const errors24h = MOCK_LOGS.filter(l => l.type === 'Camera denied' || l.type === 'API error').length;
+  const totalUsers = beDashboard ? beDashboard.totalUsers : MOCK_USERS.length;
+  const avgAccuracy = beDashboard ? Math.round(Number(beDashboard.avgFormScore)) : 84;
+  const errors24h = liveLogs.filter(l => l.type === 'Camera denied' || l.type === 'API error').length;
 
   // Dữ liệu chất lượng nhận diện sinh trắc học AI theo từng bài tập
   const qualityData = [
@@ -72,7 +90,7 @@ export default function AdminDashboard() {
     { exercise: 'Push-up', avgVisibility: 0.91, avgFps: 26, bodyLost: 3 },
   ];
 
-  const recentErrors = MOCK_LOGS.slice(0, 5);
+  const recentErrors = liveLogs.slice(0, 5);
 
   const handleExportReport = () => {
     const csvContent =

@@ -8,6 +8,7 @@ import IntroPage from './pages/IntroPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import SignUpPage from './pages/auth/SignUpPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 // Trainee Pages
 import HomePage from './pages/trainee/HomePage';
@@ -49,15 +50,16 @@ function RootRedirect() {
   const { user } = useAuth();
   const hasSeenIntro = sessionStorage.getItem('aifit_intro_seen');
 
+  if (user) {
+    sessionStorage.setItem('aifit_intro_seen', '1');
+    return user.role === 'Admin' ? <Navigate to="/admin" replace /> : <HomePage />;
+  }
+
   if (!hasSeenIntro) {
     return <Navigate to="/intro" replace />;
   }
 
-  if (!user) {
-    return <Navigate to="/welcome" replace />;
-  }
-
-  return user.role === 'Admin' ? <Navigate to="/admin" replace /> : <HomePage />;
+  return <Navigate to="/welcome" replace />;
 }
 
 export default function App() {
@@ -73,6 +75,7 @@ export default function App() {
             {/* Auth */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* Trainee Portal */}
             <Route path="/" element={<RootRedirect />} />

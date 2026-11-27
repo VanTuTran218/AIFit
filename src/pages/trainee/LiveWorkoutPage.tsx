@@ -7,6 +7,7 @@ import { FeedbackPanel } from '../../components/workout/FeedbackPanel';
 import { WorkoutControlBar } from '../../components/workout/WorkoutControlBar';
 import { SystemMessages } from '../../components/workout/SystemMessages';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { dataService } from '../../services/dataService';
 import type { WorkoutSession } from '../../types';
 
 export default function LiveWorkoutPage() {
@@ -98,7 +99,7 @@ export default function LiveWorkoutPage() {
     setShowStopConfirm(true);
   };
 
-  const handleEndAndSave = () => {
+  const handleEndAndSave = async () => {
     setShowStopConfirm(false);
     setWorkoutState('saving');
 
@@ -127,11 +128,11 @@ export default function LiveWorkoutPage() {
       synced: !isOffline,
     };
 
-    localStorage.setItem('aifit_latest_session', JSON.stringify(newSession));
+    const savedSession = await dataService.saveSession(newSession);
 
     setTimeout(() => {
-      navigate(`/session/${newSession.id}/summary`);
-    }, 1200);
+      navigate(`/session/${savedSession.id}/summary`);
+    }, 900);
   };
 
   return (

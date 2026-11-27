@@ -47,12 +47,10 @@ export const TopNavbar: React.FC = () => {
   ];
 
   const getInitials = (name?: string) => {
-    if (!name) return 'A';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+    const clean = (name || '').trim();
+    if (!clean) return 'U';
+    const parts = clean.split(/\s+/);
+    return parts[parts.length - 1][0].toUpperCase();
   };
 
   return (

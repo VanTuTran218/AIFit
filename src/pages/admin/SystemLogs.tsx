@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Download,
   FileText,
@@ -19,12 +19,18 @@ import { AdminLayout } from '../../components/layout/AdminLayout';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useToast } from '../../components/ui/Toast';
 import { MOCK_LOGS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
 import { PageTransition } from '../../components/ui/PageTransition';
 import type { SystemLog } from '../../types';
 
 export default function SystemLogs() {
   const { success } = useToast();
-  const [logs] = useState<SystemLog[]>(MOCK_LOGS);
+  const [logs, setLogs] = useState<SystemLog[]>(MOCK_LOGS);
+
+  useEffect(() => {
+    if (!dataService.isLiveBackend()) return;
+    dataService.getSystemLogs().then(setLogs).catch(() => {});
+  }, []);
   const [periodFilter, setPeriodFilter] = useState('7');
   const [typeFilter, setTypeFilter] = useState('Tất cả');
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);

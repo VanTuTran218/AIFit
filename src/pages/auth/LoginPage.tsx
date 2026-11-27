@@ -21,7 +21,9 @@ export default function LoginPage() {
   const location = useLocation();
   const { success } = useToast();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(
+    () => (location.state as { prefillEmail?: string } | null)?.prefillEmail || ''
+  );
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedDemo, setSelectedDemo] = useState<'trainee' | 'admin' | null>(null);
@@ -222,9 +224,17 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-[14px] font-medium text-[#202124]">
-                Mật khẩu
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-[14px] font-medium text-[#202124]">
+                  Mật khẩu
+                </label>
+                <NavLink
+                  to="/forgot-password"
+                  className="text-xs font-semibold text-[#92701B] hover:text-[#7A5D13] hover:underline transition-colors"
+                >
+                  Quên mật khẩu?
+                </NavLink>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}

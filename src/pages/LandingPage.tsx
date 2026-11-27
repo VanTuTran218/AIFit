@@ -23,7 +23,11 @@ import {
   Dumbbell,
   Target,
   Sparkles,
+  User as UserIcon,
+  LogOut,
+  History,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import {
   AreaChart,
   Area,
@@ -122,7 +126,26 @@ function FadeUp({
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const getAvatarLetter = (name?: string, email?: string) => {
+    const clean = (name || '').trim();
+    if (clean) {
+      const parts = clean.split(/\s+/);
+      return parts[parts.length - 1][0].toUpperCase();
+    }
+    if (email) return email[0].toUpperCase();
+    return 'U';
+  };
+
+  const handleLogout = () => {
+    setUserMenuOpen(false);
+    setMenuOpen(false);
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
@@ -170,21 +193,119 @@ function Navbar() {
           ))}
         </nav>
 
-        {/* Nút đăng nhập & Bắt đầu */}
+        {/* Nút đăng nhập / Thông tin tài khoản đã đăng nhập */}
         <div className="hidden md:flex items-center gap-4">
-          <button
-            onClick={() => navigate('/login')}
-            className="text-sm font-bold text-gray-300 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer"
-          >
-            Đăng nhập
-          </button>
-          <button
-            onClick={() => navigate('/signup')}
-            className="text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-gold/25 cursor-pointer animate-light-sweep"
-            style={{ background: '#C9A227', color: '#101114' }}
-          >
-            Bắt đầu ngay
-          </button>
+          {user ? (
+            <div className="relative flex items-center gap-3">
+              <button
+                onClick={() => navigate(user.role === 'Admin' ? '/admin' : '/')}
+                className="text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-md shadow-gold/20 cursor-pointer"
+                style={{ background: '#C9A227', color: '#101114' }}
+              >
+                {user.role === 'Admin' ? 'Bảng Quản trị' : 'Vào phòng tập'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-gold/35 backdrop-blur-md transition-all cursor-pointer"
+              >
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center font-display font-black text-sm shadow-sm"
+                  style={{ background: '#C9A227', color: '#101114' }}
+                >
+                  {getAvatarLetter(user.fullName, user.email)}
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-bold text-white max-w-[130px] truncate leading-tight">
+                    {user.fullName}
+                  </div>
+                  <div className="text-[10px] text-[#E7CA80] leading-none mt-0.5">
+                    {user.role === 'Admin' ? 'Quản trị viên' : 'Học viên'}
+                  </div>
+                </div>
+                <ChevronDown size={14} className="text-gray-300" />
+              </button>
+
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#15171C] border border-gold/30 shadow-2xl py-2 z-50 text-xs text-gray-200"
+                  >
+                    <div className="px-4 py-2.5 border-b border-white/10">
+                      <div className="font-bold text-white truncate">{user.fullName}</div>
+                      <div className="text-[11px] text-gray-400 truncate mt-0.5">{user.email}</div>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          navigate(user.role === 'Admin' ? '/admin' : '/');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/10 hover:text-gold transition-colors cursor-pointer"
+                      >
+                        <Dumbbell size={14} className="text-gold" />
+                        <span>{user.role === 'Admin' ? 'Bảng điều khiển Admin' : 'Trang chủ tập luyện'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          navigate('/history');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/10 hover:text-gold transition-colors cursor-pointer"
+                      >
+                        <History size={14} className="text-gold" />
+                        <span>Lịch sử tập luyện</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          navigate('/profile');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/10 hover:text-gold transition-colors cursor-pointer"
+                      >
+                        <UserIcon size={14} className="text-gold" />
+                        <span>Hồ sơ cá nhân</span>
+                      </button>
+                    </div>
+                    <div className="border-t border-white/10 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-left text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer font-semibold"
+                      >
+                        <LogOut size={14} />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate('/login')}
+                className="text-sm font-bold text-gray-300 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer"
+              >
+                Đăng nhập
+              </button>
+              <button
+                onClick={() => navigate('/signup')}
+                className="text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-gold/25 cursor-pointer animate-light-sweep"
+                style={{ background: '#C9A227', color: '#101114' }}
+              >
+                Bắt đầu ngay
+              </button>
+            </>
+          )}
         </div>
 
         {/* Nút mở menu mobile */}
@@ -216,18 +337,55 @@ function Navbar() {
               </button>
             ))}
             <div className="pt-4 border-t border-white/10 flex flex-col gap-3">
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full py-3 rounded-xl border border-gold/40 text-gold font-bold text-sm text-center"
-              >
-                Đăng nhập
-              </button>
-              <button
-                onClick={() => navigate('/signup')}
-                className="w-full py-3 rounded-xl bg-gold text-dark-bg font-bold text-sm text-center"
-              >
-                Bắt đầu ngay
-              </button>
+              {user ? (
+                <>
+                  <div className="flex items-center gap-3 px-2 py-2">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center font-display font-black text-sm"
+                      style={{ background: '#C9A227', color: '#101114' }}
+                    >
+                      {getAvatarLetter(user.fullName, user.email)}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white">{user.fullName}</div>
+                      <div className="text-xs text-gray-400">{user.email}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate(user.role === 'Admin' ? '/admin' : '/')}
+                    className="w-full py-3 rounded-xl bg-gold text-dark-bg font-bold text-sm text-center"
+                  >
+                    Vào phòng tập
+                  </button>
+                  <button
+                    onClick={() => navigate('/profile')}
+                    className="w-full py-3 rounded-xl border border-gold/40 text-gold font-bold text-sm text-center"
+                  >
+                    Hồ sơ cá nhân
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full py-3 rounded-xl border border-red-500/40 text-red-400 font-bold text-sm text-center"
+                  >
+                    Đăng xuất
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="w-full py-3 rounded-xl border border-gold/40 text-gold font-bold text-sm text-center"
+                  >
+                    Đăng nhập
+                  </button>
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="w-full py-3 rounded-xl bg-gold text-dark-bg font-bold text-sm text-center"
+                  >
+                    Bắt đầu ngay
+                  </button>
+                </>
+              )}
             </div>
           </motion.div>
         )}
@@ -239,6 +397,7 @@ function Navbar() {
 // ─── Hero Section ─────────────────────────────────────────────────────────────
 function HeroSection() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <section id="hero" className="relative min-h-screen">
@@ -297,11 +456,11 @@ function HeroSection() {
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
                 <button
-                  onClick={() => navigate('/signup')}
+                  onClick={() => navigate(user ? (user.role === 'Admin' ? '/admin' : '/') : '/signup')}
                   className="px-8 py-4 rounded-2xl font-display font-bold text-base flex items-center gap-3 transition-all shadow-xl shadow-gold/25 cursor-pointer animate-light-sweep"
                   style={{ background: '#C9A227', color: '#101114' }}
                 >
-                  <span>Bắt đầu tập luyện</span>
+                  <span>{user ? 'Vào phòng tập ngay' : 'Bắt đầu tập luyện'}</span>
                   <ArrowRight size={18} />
                 </button>
 
@@ -1411,19 +1570,12 @@ function Section11FinalCTA() {
 
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/')}
               className="w-full sm:w-auto px-10 py-4 rounded-2xl font-display font-black text-base transition-all shadow-2xl shadow-gold/30 cursor-pointer flex items-center justify-center gap-2 animate-light-sweep"
               style={{ background: '#C9A227', color: '#101114' }}
             >
               <span>Bắt đầu hành trình của bạn</span>
               <ArrowRight size={18} />
-            </button>
-
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-display font-bold text-base border border-white/20 text-white hover:border-gold hover:text-gold backdrop-blur-md transition-colors cursor-pointer"
-            >
-              Đăng nhập tài khoản
             </button>
           </div>
         </FadeUp>

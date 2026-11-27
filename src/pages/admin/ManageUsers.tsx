@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   Lock,
@@ -17,6 +17,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { MOCK_USERS } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
 import { PageTransition } from '../../components/ui/PageTransition';
 import type { User } from '../../types';
 
@@ -25,6 +26,11 @@ export default function ManageUsers() {
   const { success } = useToast();
 
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
+
+  useEffect(() => {
+    if (!dataService.isLiveBackend()) return;
+    dataService.getAdminUsers().then(setUsers).catch(() => {});
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('Tất cả');
   const [statusFilter, setStatusFilter] = useState<string>('Tất cả');
@@ -56,20 +62,23 @@ export default function ManageUsers() {
     });
   }, [users, searchTerm, roleFilter, statusFilter]);
 
-  const handleActionConfirm = () => {
+  const handleActionConfirm = async () => {
     if (!targetUser || !dialogMode) return;
 
     if (dialogMode === 'lock') {
+      await dataService.updateAdminUserStatus(targetUser.id, false).catch(() => {});
       setUsers(prev =>
         prev.map(u => (u.id === targetUser.id ? { ...u, status: 'Locked' } : u))
       );
       success(`Tài khoản "${targetUser.fullName}" đã được khóa.`);
     } else if (dialogMode === 'unlock') {
+      await dataService.updateAdminUserStatus(targetUser.id, true).catch(() => {});
       setUsers(prev =>
         prev.map(u => (u.id === targetUser.id ? { ...u, status: 'Active' } : u))
       );
       success(`Tài khoản "${targetUser.fullName}" đã được mở khóa thành công.`);
     } else if (dialogMode === 'delete') {
+      await dataService.deleteAdminUser(targetUser.id).catch(() => {});
       setUsers(prev => prev.filter(u => u.id !== targetUser.id));
       success(`Đã xóa vĩnh viễn tài khoản người dùng "${targetUser.fullName}".`);
     }

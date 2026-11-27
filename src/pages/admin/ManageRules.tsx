@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -17,6 +17,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/Toast';
 import { MOCK_RULES } from '../../data/mockData';
+import { dataService } from '../../services/dataService';
 import { PageTransition } from '../../components/ui/PageTransition';
 import type { ExerciseRule } from '../../types';
 
@@ -25,6 +26,11 @@ export default function ManageRules() {
   const { success } = useToast();
 
   const [rules, setRules] = useState<ExerciseRule[]>(MOCK_RULES);
+
+  useEffect(() => {
+    if (!dataService.isLiveBackend()) return;
+    dataService.getAdminRules().then(setRules).catch(() => {});
+  }, []);
   const [exerciseFilter, setExerciseFilter] = useState('Tất cả');
   const [statusFilter, setStatusFilter] = useState('Tất cả');
   const [targetRule, setTargetRule] = useState<ExerciseRule | null>(null);
@@ -38,9 +44,12 @@ export default function ManageRules() {
     });
   }, [rules, exerciseFilter, statusFilter]);
 
-  const handleDeactivateConfirm = () => {
+  const handleDeactivateConfirm = async () => {
     if (!targetRule) return;
     const nextStatus = targetRule.status === 'Active' ? 'Inactive' : 'Active';
+    if (dataService.isLiveBackend()) {
+      await dataService.updateAdminRule(targetRule.id, { isEnabled: nextStatus === 'Active' }).catch(() => {});
+    }
     setRules(prev =>
       prev.map(r => (r.id === targetRule.id ? { ...r, status: nextStatus } : r))
     );

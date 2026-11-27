@@ -1,0 +1,14 @@
+## .NET build artifacts
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+
+## EF Core migration temp
+migrations_tmp/
+
+## NuGet
+*.nupkg
+packages/

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const TOTAL_DURATION = 5000; // ms
 const FORCE_TIMEOUT = 6000;
@@ -58,40 +59,42 @@ const JOINT_APPEAR_ORDER = [
 
 export default function IntroPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const targetRoute = user ? (user.role === 'Admin' ? '/admin' : '/') : '/welcome';
 
   useEffect(() => {
     const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (mql.matches) {
       markSeen();
-      navigate('/welcome', { replace: true });
+      navigate(targetRoute, { replace: true });
       return;
     }
-  }, [navigate]);
+  }, [navigate, targetRoute]);
 
   useEffect(() => {
     const t = setTimeout(() => {
       markSeen();
-      navigate('/welcome', { replace: true });
+      navigate(targetRoute, { replace: true });
     }, FORCE_TIMEOUT);
     return () => clearTimeout(t);
-  }, [navigate]);
+  }, [navigate, targetRoute]);
 
   useEffect(() => {
     const t = setTimeout(() => {
       markSeen();
-      navigate('/welcome', { replace: true });
+      navigate(targetRoute, { replace: true });
     }, TOTAL_DURATION);
     return () => clearTimeout(t);
-  }, [navigate]);
+  }, [navigate, targetRoute]);
 
   function handleSkip() {
     markSeen();
-    navigate('/welcome', { replace: true });
+    navigate(targetRoute, { replace: true });
   }
 
   function handleExplore() {
     markSeen();
-    navigate('/welcome', { replace: true });
+    navigate(targetRoute, { replace: true });
   }
 
   const jointMap = Object.fromEntries(JOINTS.map(j => [j.id, j]));
